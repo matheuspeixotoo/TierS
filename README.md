@@ -30,40 +30,7 @@
 
 Sem cadastro, sem app pra instalar: abre no navegador do celular e pronto.
 
-## Como rodar
-
-### 1. Criar o projeto no Supabase
-
-1. Crie um projeto em [supabase.com](https://supabase.com).
-2. Em **Authentication > Sign In / Providers**, ative **Allow anonymous sign-ins**. Os jogadores entram só com um apelido, sem cadastro.
-3. Em **SQL Editor**, rode os arquivos de `supabase/migrations/` em ordem: primeiro `20261103000000_tiers.sql`, depois `20261103010000_theme_choice.sql`, `20261103020000_reroll_recharge.sql` `20261103030000_player_counts.sql`, `20261103040000_no_own_swap.sql` e por último `20261103050000_more_themes.sql`.
-   Ou rode o arquivo único `supabase/setup_completo.sql`, que equivale aos 6. Ou ainda, com a Supabase CLI: `supabase link` e `supabase db push`.
-4. Em **Database > Publications**, confira se a tabela `rooms` aparece em `supabase_realtime`. A migration já faz isso.
-
-### 2. Configurar o front
-
-```bash
-cp .env.example .env.local
-```
-
-Preencha `.env.local` com a URL do projeto e a chave anon (ou publishable), que ficam em **Project Settings > API**.
-
-### 3. Rodar
-
-```bash
-npm install
-npm run dev
-```
-
-O `npm run dev` já sobe com `--host`, então dá para abrir no celular pelo IP do PC na mesma rede Wi‑Fi (o Vite mostra o endereço no terminal).
-
-### 4. Publicar
-
-O repositório já traz um `netlify.toml` (build `npm run build`, pasta `dist`). Na Netlify, conecte o repositório ou envie a pasta `dist`, e cadastre as mesmas duas variáveis (`VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`) em **Project configuration > Environment variables**. Vercel e Cloudflare Pages funcionam do mesmo jeito.
-
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/matheuspeixotoo/TierS)
-
-A versão oficial está no ar em **[tiers-jogo.netlify.app](https://tiers-jogo.netlify.app)**.
+**Jogue em [tiers-jogo.netlify.app](https://tiers-jogo.netlify.app).**
 
 ## Formações
 
@@ -102,17 +69,12 @@ src/lib/               cliente Supabase, chamadas RPC, tipos e constantes
 src/hooks/useRoom.ts   sincronização em tempo real da sala
 src/screens/           Home, Lobby, Deal (sorteio), Write, Game, Final
 src/components/        UI compartilhada (logo, avatares, ranking, modal)
-netlify.toml           build e pasta de publicação na Netlify
 docs/                  imagens do README
 ```
 
 ## Temas
 
-O jogo vem com 200 temas, na tabela `themes`. Para adicionar mais:
-
-```sql
-insert into themes(name) values ('Filmes da Pixar'), ('Comidas de boteco');
-```
+O jogo vem com 200 temas, de "Filmes de comédia" a "Tipos de parente na festa de família". A cada rodada o jogador sorteado recebe 2 deles para escolher.
 
 ## Limitações conhecidas
 
