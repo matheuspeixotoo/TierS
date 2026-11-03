@@ -1,0 +1,10 @@
+{
+  "name": "TierS",
+  "short_name": "TierS",
+  "description": "O jogo de Tier List em grupo.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2B1A63",
+  "theme_color": "#2B1A63",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
