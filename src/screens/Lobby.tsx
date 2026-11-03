@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { PlayerCount } from '../components/PlayerCount'
 import { Avatar, BigCard, Waiting } from '../components/ui'
+import { avatarUrl } from '../lib/supabase'
 import { api } from '../lib/api'
 import { HOW_TO, TIER_COLORS, formationText, hostName } from '../lib/game'
 import type { GameState, Run } from '../lib/types'
@@ -82,7 +83,7 @@ export function Lobby({ s, run, busy, onShare, shareLabel, onLeave }: {
               const isHost = p.id === s.room.host_player
               return (
                 <li key={p.id} className="flex min-w-0 flex-col items-center gap-1">
-                  <Avatar name={p.name} color={p.color} size={44} />
+                  <Avatar name={p.name} color={p.color} size={44} src={avatarUrl(p.avatar)} />
                   <span className="max-w-full truncate text-xs font-extrabold">{p.id === s.me ? 'Você' : p.name}</span>
                   {isHost && <span className="rounded-full bg-ink px-1.5 py-px text-[10px] font-black tracking-wider text-sun">HOST</span>}
                 </li>

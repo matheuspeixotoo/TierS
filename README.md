@@ -31,6 +31,8 @@
 
 Sem cadastro, sem app pra instalar: abre no navegador do celular e pronto.
 
+**Conta opcional.** Quem quiser pode criar uma conta com e-mail e senha, nome, nick e foto. A conta guarda o histórico de partidas (posição, pontos, acertos e erros), mostra suas estatísticas e entra no ranking geral entre todos os jogadores com conta. Quem não quiser continua jogando como visitante, só com um apelido.
+
 **Jogue em [tiers-jogo.netlify.app](https://tiers-jogo.netlify.app).**
 
 ## Formações
@@ -61,6 +63,7 @@ Com até 4 jogadores, os ajustes têm 2 voltas. Subir ou descer 1 nível conside
 - **Pontuação por rodada.** +1 por resposta posicionada no Tier certo e −1 no errado. +1 por ajuste que aproxima a resposta do Tier real e −1 por ajuste que afasta. Se o time gabaritar, todo mundo ganha +2. O placar soma entre rodadas até o host encerrar a partida.
 - **Sua resposta é intocável por você.** Ninguém posiciona, move ou troca de lugar uma resposta que escreveu, senão ficaria fácil colocar as próprias no Tier certo.
 - **Jogador sumiu?** O host pode pular a vez de quem travou o posicionamento ou os ajustes.
+- **Histórico e ranking.** Quando o host encerra a partida, o resultado é gravado para todos os jogadores. Quem tem conta vê isso no perfil e entra no ranking geral, ordenado por vitórias, pontos e acertos. Nome e sobrenome só aparecem para o próprio dono; a galera vê o nick e a foto.
 
 ## Estrutura
 
@@ -68,7 +71,7 @@ Com até 4 jogadores, os ajustes têm 2 voltas. Subir ou descer 1 nível conside
 supabase/migrations/   schema, segurança e regras do jogo (SQL)
 src/lib/               cliente Supabase, chamadas RPC, tipos e constantes
 src/hooks/useRoom.ts   sincronização em tempo real da sala
-src/screens/           Home, Lobby, Deal (sorteio), Write, Game, Final
+src/screens/           Home, Account (entrar/criar conta), Profile, Lobby, Deal, Write, Game, Final
 src/components/        UI compartilhada (logo, avatares, ranking, modal)
 docs/                  imagens do README
 ```

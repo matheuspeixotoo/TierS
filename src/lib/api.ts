@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { GameState } from './types'
+import type { GameState, Profile, RankingRow } from './types'
 
 function clean(message: string): string {
   // Mensagens das funções SQL já vêm em português; só tiramos ruído técnico.
@@ -35,4 +35,11 @@ export const api = {
   nextRound: (room: string) => call<void>('next_round', { p_room: room }),
   endMatch: (room: string) => call<void>('end_match', { p_room: room }),
   newMatch: (room: string) => call<void>('new_match', { p_room: room }),
+
+  // Conta e perfil
+  getProfile: (user?: string) => call<Profile | null>('get_profile', { p_user: user ?? null }),
+  saveProfile: (nick: string, first: string, last: string) =>
+    call<Profile>('save_profile', { p_nick: nick, p_first: first, p_last: last }),
+  setAvatar: (path: string | null) => call<void>('set_avatar', { p_path: path }),
+  getRanking: (limit = 50) => call<RankingRow[]>('get_ranking', { p_limit: limit }),
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Avatar, BigCard } from '../components/ui'
+import { avatarUrl } from '../lib/supabase'
 import { api } from '../lib/api'
 import { TIER_COLORS, TIER_HINTS, TIERS, plural } from '../lib/game'
 import type { GameState, Run } from '../lib/types'
@@ -110,7 +111,7 @@ export function Write({ s, run, busy }: { s: GameState; run: Run; busy: boolean 
             <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
               {s.players.map((p) => (
                 <li key={p.id} className={p.answered ? '' : 'opacity-35'} title={`${p.name}${p.answered ? ' respondeu' : ' está pensando'}`}>
-                  <Avatar name={p.name} color={p.color} size={30} />
+                  <Avatar name={p.name} color={p.color} size={30} src={avatarUrl(p.avatar)} />
                 </li>
               ))}
             </ul>

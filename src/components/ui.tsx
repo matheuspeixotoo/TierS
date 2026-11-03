@@ -21,11 +21,26 @@ export function Logo({ size = 'md' }: { size?: 'md' | 'lg' }) {
   )
 }
 
-export function Avatar({ name, color, size = 40, ring = false, label }: { name: string; color: string; size?: number; ring?: boolean; label?: string }) {
+export function Avatar({
+  name,
+  color,
+  size = 40,
+  ring = false,
+  label,
+  src,
+}: {
+  name: string
+  color: string
+  size?: number
+  ring?: boolean
+  label?: string
+  /** Foto de perfil; sem ela mostramos as iniciais sobre a cor do jogador. */
+  src?: string
+}) {
   return (
     <span
       title={label ?? name}
-      className="flex flex-none items-center justify-center rounded-full border-[3px] border-ink font-black text-ink"
+      className="flex flex-none items-center justify-center overflow-hidden rounded-full border-[3px] border-ink font-black text-ink"
       style={{
         width: size,
         height: size,
@@ -35,7 +50,7 @@ export function Avatar({ name, color, size = 40, ring = false, label }: { name: 
         transform: ring ? 'scale(1.08)' : undefined,
       }}
     >
-      {initials(name)}
+      {src ? <img src={src} alt="" className="h-full w-full object-cover" draggable={false} /> : initials(name)}
     </span>
   )
 }

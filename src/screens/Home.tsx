@@ -1,14 +1,31 @@
 import { useState } from 'react'
 import { PlayerCount } from '../components/PlayerCount'
-import { BigCard, Logo } from '../components/ui'
+import { Avatar, BigCard, Logo } from '../components/ui'
 import { api } from '../lib/api'
 import { HOW_TO, TIER_COLORS } from '../lib/game'
+import { avatarUrl } from '../lib/supabase'
+import type { Profile } from '../lib/types'
 
 const NAME_KEY = 'tiers.name'
 const SIZE_KEY = 'tiers.size'
 
-export function Home({ initialCode, onEnter }: { initialCode: string; onEnter: (roomId: string) => void }) {
-  const [name, setName] = useState(() => localStorage.getItem(NAME_KEY) ?? '')
+export function Home({
+  initialCode,
+  profile,
+  onEnter,
+  onAccount,
+  onProfile,
+}: {
+  initialCode: string
+  /** Perfil da conta, ou null para visitante. */
+  profile: Profile | null
+  onEnter: (roomId: string) => void
+  onAccount: () => void
+  onProfile: () => void
+}) {
+  const [typed, setTyped] = useState(() => localStorage.getItem(NAME_KEY) ?? '')
+  const name = profile ? profile.nick : typed
+  const setName = setTyped
   const [code, setCode] = useState(initialCode)
   const [size, setSize] = useState(() => Number(localStorage.getItem(SIZE_KEY)) || 4)
   const [busy, setBusy] = useState<'create' | 'join' | null>(null)
@@ -72,20 +89,36 @@ export function Home({ initialCode, onEnter }: { initialCode: string; onEnter: (
             void go(cleanCode.length === 4 ? 'join' : 'create')
           }}
         >
-          <div className="flex flex-col gap-2">
-            <label htmlFor="nick" className="text-[15px] font-black">
-              Seu apelido
-            </label>
-            <input
-              id="nick"
-              className="field"
-              value={name}
-              maxLength={16}
-              autoComplete="nickname"
-              placeholder="Como a galera te chama?"
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
+          {profile ? (
+            <div className="flex items-center gap-3 rounded-[18px] bg-ink px-3.5 py-2.5 text-cream">
+              <Avatar name={profile.nick} color="#FFD93D" size={44} src={avatarUrl(profile.avatar_path)} />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="text-xs font-extrabold text-haze">JOGANDO COMO</span>
+                <span className="truncate font-display text-xl text-sun">{profile.nick}</span>
+              </div>
+              <button type="button" onClick={onProfile} className="min-h-10 rounded-xl border-2 border-cream bg-sun px-3.5 text-sm font-black text-ink">
+                Ver perfil
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <label htmlFor="nick" className="text-[15px] font-black">
+                Seu apelido
+              </label>
+              <input
+                id="nick"
+                className="field"
+                value={name}
+                maxLength={16}
+                autoComplete="nickname"
+                placeholder="Como a galera te chama?"
+                onChange={(e) => setName(e.target.value)}
+              />
+              <button type="button" onClick={onAccount} className="self-start text-sm font-black text-muted underline decoration-2 underline-offset-2">
+                Entrar ou criar conta pra guardar seu histórico
+              </button>
+            </div>
+          )}
 
           <div className="flex flex-col gap-2">
             <span className="text-[15px] font-black">Quantas pessoas vão jogar?</span>

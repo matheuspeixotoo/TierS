@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { BigCard, Logo, Modal, Toast } from './components/ui'
+import { Avatar, BigCard, Logo, Modal, Toast } from './components/ui'
+import { useAuth } from './hooks/useAuth'
 import { useRoom } from './hooks/useRoom'
 import { api } from './lib/api'
 import { hostName, nameOf, shareInvite } from './lib/game'
-import { ensureSession, isConfigured } from './lib/supabase'
+import { avatarUrl, isConfigured, signOut } from './lib/supabase'
 import type { Run, Status } from './lib/types'
+import { Account } from './screens/Account'
 import { Deal, Intro } from './screens/Deal'
 import { Final } from './screens/Final'
 import { Game } from './screens/Game'
 import { Home } from './screens/Home'
 import { Lobby } from './screens/Lobby'
+import { ProfileScreen } from './screens/Profile'
 import { Write } from './screens/Write'
 
 const ROOM_KEY = 'tiers.room'
@@ -24,7 +27,8 @@ const STEPS: [Status, string][] = [
 ]
 
 export default function App() {
-  const [auth, setAuth] = useState<'loading' | 'ok' | { error: string }>('loading')
+  const { user, status: auth, anonymous, profile, profileLoaded, setProfile, refreshProfile } = useAuth()
+  const [page, setPage] = useState<'home' | 'account' | 'profile'>('home')
   const [roomId, setRoomId] = useState<string | null>(() => localStorage.getItem(ROOM_KEY))
   const [urlCode] = useState(() => (new URLSearchParams(window.location.search).get('sala') ?? '').toUpperCase().slice(0, 4))
   const [busy, setBusy] = useState(false)
@@ -33,13 +37,6 @@ export default function App() {
   const [shareLabel, setShareLabel] = useState('Compartilhar')
   const [introDone, setIntroDone] = useState(() => sessionStorage.getItem(INTRO_KEY) ?? '')
   const toastTimer = useRef<number | undefined>(undefined)
-
-  useEffect(() => {
-    if (!isConfigured) return
-    ensureSession()
-      .then(() => setAuth('ok'))
-      .catch((e: Error) => setAuth({ error: e.message }))
-  }, [])
 
   const { state: s, error, refresh } = useRoom(auth === 'ok' ? roomId : null)
 
@@ -59,6 +56,21 @@ export default function App() {
     if (roomId && !s && error && /não está nesta sala|não encontrada/i.test(error)) clearRoom()
   }, [roomId, s, error, clearRoom])
 
+  // Trocou de conta (entrou ou saiu): a sala era da sessão antiga.
+  const userId = user?.id ?? null
+  const firstUser = useRef<string | null | undefined>(undefined)
+  useEffect(() => {
+    if (!userId) return
+    if (firstUser.current === undefined) {
+      firstUser.current = userId
+      return
+    }
+    if (firstUser.current !== userId) {
+      firstUser.current = userId
+      clearRoom()
+    }
+  }, [userId, clearRoom])
+
   const run: Run = useCallback(
     async (fn) => {
       setBusy(true)
@@ -76,6 +88,12 @@ export default function App() {
     },
     [refresh, showToast],
   )
+
+  // Abre o perfil já com as estatísticas mais recentes.
+  function openProfile() {
+    setPage('profile')
+    void refreshProfile().catch((e: Error) => showToast(e.message))
+  }
 
   function enter(id: string) {
     localStorage.setItem(ROOM_KEY, id)
@@ -109,8 +127,51 @@ export default function App() {
     screen = <Loading />
   } else if (typeof auth === 'object') {
     screen = <Problem text={auth.error} />
+  } else if (!s && !anonymous && profileLoaded && !profile) {
+    // Conta sem perfil (cadastro parou no meio): termina antes de jogar.
+    screen = (
+      <Account
+        mode="complete"
+        onDone={(p) => {
+          setProfile(p)
+          setPage('home')
+        }}
+        onBack={() => void signOut().catch((e: Error) => showToast(e.message))}
+      />
+    )
+  } else if (!s && page === 'account') {
+    screen = (
+      <Account
+        mode="login"
+        onDone={(p) => {
+          setProfile(p)
+          setPage('home')
+          showToast(`Bem-vindo, ${p.nick}!`)
+        }}
+        onBack={() => setPage('home')}
+      />
+    )
+  } else if (!s && page === 'profile' && profile) {
+    screen = (
+      <ProfileScreen
+        profile={profile}
+        email={user?.email ?? null}
+        onChange={setProfile}
+        onBack={() => setPage('home')}
+        onToast={showToast}
+        onLogout={async () => {
+          try {
+            await signOut()
+            setPage('home')
+            showToast('Você saiu da conta.')
+          } catch (e) {
+            showToast((e as Error).message)
+          }
+        }}
+      />
+    )
   } else if (!s) {
-    screen = <Home initialCode={urlCode} onEnter={enter} />
+    screen = <Home initialCode={urlCode} profile={profile} onEnter={enter} onAccount={() => setPage('account')} onProfile={openProfile} />
   } else if (status === 'lobby') {
     screen = <Lobby s={s} run={run} busy={busy} onShare={share} shareLabel={shareLabel} onLeave={leave} />
   } else if (status === 'deal') {
@@ -140,6 +201,12 @@ export default function App() {
       <div className="mx-auto flex min-h-0 w-full max-w-[1560px] flex-1 flex-col gap-2 md:gap-3">
         <header className="flex flex-none flex-wrap items-center justify-between gap-2.5">
           <Logo />
+          {!s && profile && page === 'home' && (
+            <button type="button" onClick={openProfile} className="flex items-center gap-2 rounded-full border-[3px] border-ink bg-night py-1 pl-1 pr-3.5 text-[13px] font-extrabold" title="Ver perfil">
+              <Avatar name={profile.nick} color="#FFD93D" size={30} src={avatarUrl(profile.avatar_path)} />
+              <span className="font-display text-sun">{profile.nick}</span>
+            </button>
+          )}
           {s && stepIdx >= 0 && (
             <nav aria-label="Etapas da rodada" className="hidden gap-2 lg:flex">
               {STEPS.map(([k, label], i) => (

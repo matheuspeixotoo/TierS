@@ -7,8 +7,9 @@ Todo o código, as regras e a tabela de formações estão no `README.md`.
 ## Estado atual
 
 - O projeto Supabase já existe: **tiers**, ref `ptzocorqhjixzlknagus`, região `sa-east-1`, organização "matheuspeixotoo's Org".
-- O banco desse projeto **já tem o schema aplicado** (03/11/2026): as 6 migrations de `supabase/migrations/` foram aplicadas pelo MCP da Supabase, com os mesmos nomes dos arquivos. `select count(*) from public.themes` dá 200.
-- O login anônimo **já está ativado** (Authentication > Sign In / Providers > "Allow anonymous sign-ins"). Captcha não foi ativado.
+- O banco desse projeto **já tem o schema aplicado** (03/11/2026): as 7 migrations de `supabase/migrations/` foram aplicadas pelo MCP da Supabase, com os mesmos nomes dos arquivos. `select count(*) from public.themes` dá 200. A 7ª (`accounts`) cria `profiles`, `matches`, `match_players`, o bucket `avatars` e as RPCs de perfil e ranking.
+- O login anônimo **já está ativado** (Authentication > Sign In / Providers > "Allow anonymous sign-ins"). Captcha não foi ativado. **"Confirm email" está desligado** de propósito: o cadastro com e-mail e senha entra na hora, sem e-mail de confirmação (o SMTP padrão do Supabase não entrega para quem não é da equipe). Por isso ainda não existe "Esqueci minha senha".
+- Contas são **opcionais**: visitante continua entrando só com apelido. Quem tem conta joga com o nick e a foto do perfil, e o `end_match` grava o resultado em `matches`/`match_players` para histórico e ranking.
 - `.env.local` **já existe**, com `VITE_SUPABASE_URL` e a chave publishable (`sb_publishable_...`) em `VITE_SUPABASE_ANON_KEY`. Está no `.gitignore`.
 - `npm install` e `npm run build` passam. `npm run dev` sobe em `http://192.168.0.65:5173/` na rede local (o endereço 172.29.x.x que o Vite também lista é de um adaptador virtual, não serve para o celular).
 - Teste de 2 jogadores (PC + celular) feito em 03/11/2026: uma rodada completa, com pontuação correta.

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Avatar, BigCard, Waiting } from '../components/ui'
+import { avatarUrl } from '../lib/supabase'
 import { api } from '../lib/api'
 import { TIER_COLORS, TIER_HINTS, TIERS, nameOf, plural } from '../lib/game'
 import type { GameState, Run } from '../lib/types'
@@ -56,7 +57,7 @@ export function Deal({ s, run, busy }: { s: GameState; run: Run; busy: boolean }
         ) : (
           <>
             <div className="flex items-center gap-3.5">
-              {chooser && <Avatar name={chooser.name} color={chooser.color} size={56} />}
+              {chooser && <Avatar name={chooser.name} color={chooser.color} size={56} src={avatarUrl(chooser.avatar)} />}
               <h1 className="m-0 font-display text-[24px] leading-tight md:text-[36px]">{nameOf(s, room.chooser)} está escolhendo o tema...</h1>
             </div>
             <Waiting>O tema aparece assim que a escolha for feita.</Waiting>

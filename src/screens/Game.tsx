@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Avatar, TierBlock, Waiting } from '../components/ui'
+import { avatarUrl } from '../lib/supabase'
 import { Ranking } from '../components/Ranking'
 import { api } from '../lib/api'
 import { TIER_COLORS, TIERS, hostName, nameOf, plural } from '../lib/game'
@@ -108,7 +109,7 @@ export function Game({ s, run, busy }: { s: GameState; run: Run; busy: boolean }
         <ul className="m-0 hidden list-none flex-wrap gap-2 p-1 md:flex">
           {s.players.map((p) => (
             <li key={p.id}>
-              <Avatar name={p.name} color={p.color} size={40} ring={p.id === cur} label={p.id === s.me ? 'Você' : p.name} />
+              <Avatar name={p.name} color={p.color} size={40} ring={p.id === cur} label={p.id === s.me ? 'Você' : p.name} src={avatarUrl(p.avatar)} />
             </li>
           ))}
         </ul>
@@ -385,7 +386,7 @@ export function Game({ s, run, busy }: { s: GameState; run: Run; busy: boolean }
                           if (p.last_bad_move) parts.push(plural(p.last_bad_move, 'movimento errado', 'movimentos errados'))
                           return (
                             <li key={p.id} className="flex min-w-0 items-center gap-2 rounded-xl border-2 border-ink bg-white px-2 py-1.5">
-                              <Avatar name={p.name} color={p.color} size={30} />
+                              <Avatar name={p.name} color={p.color} size={30} src={avatarUrl(p.avatar)} />
                               <div className="flex min-w-0 flex-col">
                                 <span className="truncate text-sm font-black">{p.id === s.me ? 'Você' : p.name}</span>
                                 <span className="text-xs font-bold text-muted">{parts.join(', ')}</span>

@@ -17,6 +17,9 @@ export interface Player {
   /** Quantas respostas o jogador escreve nesta rodada. */
   cards: number
   answered: boolean
+  /** Caminho da foto de perfil no bucket "avatars" (só quem tem conta). */
+  avatar: string | null
+  registered: boolean
 }
 
 export interface Card {
@@ -82,3 +85,54 @@ export interface GameState {
 
 /** Executa uma ação no servidor, mostrando erro em toast e atualizando o estado. */
 export type Run = (fn: () => Promise<unknown>) => Promise<boolean>
+
+/** Estatísticas acumuladas de uma conta (partidas encerradas pelo host). */
+export interface ProfileStats {
+  matches: number
+  wins: number
+  points: number
+  hits: number
+  misses: number
+  best: number
+  gabaritos: number
+}
+
+export interface MatchSummary {
+  id: string
+  ended_at: string
+  players_count: number
+  rounds_done: number
+  gabaritos: number
+  position: number
+  score: number
+  hits: number
+  misses: number
+  winner: string | null
+}
+
+export interface Profile {
+  user_id: string
+  nick: string
+  /** Só vem para o próprio dono do perfil. */
+  first_name: string | null
+  last_name: string | null
+  avatar_path: string | null
+  created_at: string
+  is_me: boolean
+  /** Posição no ranking geral (null para quem ainda não jogou). */
+  rank: number | null
+  stats: ProfileStats
+  history: MatchSummary[]
+}
+
+export interface RankingRow {
+  user_id: string
+  nick: string
+  avatar_path: string | null
+  is_me: boolean
+  matches: number
+  wins: number
+  points: number
+  hits: number
+  misses: number
+}
