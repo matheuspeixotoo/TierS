@@ -81,3 +81,7 @@ O jogo vem com 200 temas, de "Filmes de comédia" a "Tipos de parente na festa d
 - Não dá para entrar numa partida que já começou. A pessoa espera o host encerrar e abrir uma nova.
 - Se alguém sumir na fase de escrever a resposta, a rodada fica esperando. Nas fases de posicionar e ajustar, o host pode pular a vez.
 - Se o host sair do jogo no meio da partida, ninguém consegue avançar a rodada.
+
+## Licença
+
+**Todos os direitos reservados.** O código está aberto para leitura, mas não há permissão para usar, copiar, modificar, hospedar ou redistribuir este software, no todo ou em parte. Quer jogar? É em [tiers-jogo.netlify.app](https://tiers-jogo.netlify.app). Veja o arquivo [LICENSE](LICENSE).
