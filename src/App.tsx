@@ -6,7 +6,7 @@ import { api } from './lib/api'
 import { hostName, nameOf, shareInvite } from './lib/game'
 import { avatarUrl, isConfigured, signOut } from './lib/supabase'
 import type { Run, Status } from './lib/types'
-import { Account } from './screens/Account'
+import { Account, ResetPassword } from './screens/Account'
 import { Deal, Intro } from './screens/Deal'
 import { Final } from './screens/Final'
 import { Game } from './screens/Game'
@@ -27,8 +27,9 @@ const STEPS: [Status, string][] = [
 ]
 
 export default function App() {
-  const { user, status: auth, anonymous, profile, profileLoaded, setProfile, refreshProfile } = useAuth()
+  const { user, status: auth, anonymous, profile, profileLoaded, setProfile, refreshProfile, recovering, setRecovering } = useAuth()
   const [page, setPage] = useState<'home' | 'account' | 'profile'>('home')
+  const [accountMode, setAccountMode] = useState<'login' | 'reset'>('login')
   const [roomId, setRoomId] = useState<string | null>(() => localStorage.getItem(ROOM_KEY))
   const [urlCode] = useState(() => (new URLSearchParams(window.location.search).get('sala') ?? '').toUpperCase().slice(0, 4))
   const [busy, setBusy] = useState(false)
@@ -127,6 +128,25 @@ export default function App() {
     screen = <Loading />
   } else if (typeof auth === 'object') {
     screen = <Problem text={auth.error} />
+  } else if (recovering) {
+    // Chegou pelo link de "esqueci minha senha": cria a senha nova antes de tudo.
+    screen = (
+      <ResetPassword
+        expired={anonymous}
+        onDone={() => {
+          setRecovering(false)
+          window.history.replaceState(null, '', window.location.pathname)
+          setPage('home')
+          showToast('Senha alterada! Você já está na sua conta.')
+        }}
+        onAskAgain={() => {
+          setRecovering(false)
+          window.history.replaceState(null, '', window.location.pathname)
+          setAccountMode('reset')
+          setPage('account')
+        }}
+      />
+    )
   } else if (!s && !anonymous && profileLoaded && !profile) {
     // Conta sem perfil (cadastro parou no meio): termina antes de jogar.
     screen = (
@@ -142,13 +162,17 @@ export default function App() {
   } else if (!s && page === 'account') {
     screen = (
       <Account
-        mode="login"
+        mode={accountMode}
         onDone={(p) => {
           setProfile(p)
           setPage('home')
+          setAccountMode('login')
           showToast(`Bem-vindo, ${p.nick}!`)
         }}
-        onBack={() => setPage('home')}
+        onBack={() => {
+          setPage('home')
+          setAccountMode('login')
+        }}
       />
     )
   } else if (!s && page === 'profile' && profile) {

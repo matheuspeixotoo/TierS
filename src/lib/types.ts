@@ -116,13 +116,24 @@ export interface Profile {
   /** Só vem para o próprio dono do perfil. */
   first_name: string | null
   last_name: string | null
+  /** Código de 6 letras para outros te adicionarem. Só vem para o dono. */
+  friend_code: string | null
+  /** Quantidade de amigos. */
+  friends: number
   avatar_path: string | null
   created_at: string
   is_me: boolean
-  /** Posição no ranking geral (null para quem ainda não jogou). */
+  /** Posição no ranking entre amigos (null para quem ainda não jogou). */
   rank: number | null
   stats: ProfileStats
   history: MatchSummary[]
+}
+
+export interface Friend {
+  user_id: string
+  nick: string
+  avatar_path: string | null
+  since: string
 }
 
 export interface RankingRow {

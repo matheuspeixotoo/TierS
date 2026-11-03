@@ -31,7 +31,7 @@
 
 Sem cadastro, sem app pra instalar: abre no navegador do celular e pronto.
 
-**Conta opcional.** Quem quiser pode criar uma conta com e-mail e senha, nome, nick e foto. A conta guarda o histórico de partidas (posição, pontos, acertos e erros), mostra suas estatísticas e entra no ranking geral entre todos os jogadores com conta. Quem não quiser continua jogando como visitante, só com um apelido.
+**Conta opcional.** Quem quiser pode criar uma conta com e-mail e senha, nome, nick e foto. A conta guarda o histórico de partidas (posição, pontos, acertos e erros), mostra suas estatísticas e ganha um **código de amigo**: quem digitar o seu código vira seu amigo, e o ranking é entre você e seus amigos. Esqueceu a senha? O link para criar uma nova chega por e-mail. Quem não quiser continua jogando como visitante, só com um apelido.
 
 **Jogue em [tiers-jogo.netlify.app](https://tiers-jogo.netlify.app).**
 
@@ -63,7 +63,9 @@ Com até 4 jogadores, os ajustes têm 2 voltas. Subir ou descer 1 nível conside
 - **Pontuação por rodada.** +1 por resposta posicionada no Tier certo e −1 no errado. +1 por ajuste que aproxima a resposta do Tier real e −1 por ajuste que afasta. Se o time gabaritar, todo mundo ganha +2. O placar soma entre rodadas até o host encerrar a partida.
 - **Sua resposta é intocável por você.** Ninguém posiciona, move ou troca de lugar uma resposta que escreveu, senão ficaria fácil colocar as próprias no Tier certo.
 - **Jogador sumiu?** O host pode pular a vez de quem travou o posicionamento ou os ajustes.
-- **Histórico e ranking.** Quando o host encerra a partida, o resultado é gravado para todos os jogadores. Quem tem conta vê isso no perfil e entra no ranking geral, ordenado por vitórias, pontos e acertos. Nome e sobrenome só aparecem para o próprio dono; a galera vê o nick e a foto.
+- **Histórico e ranking.** Quando o host encerra a partida, o resultado é gravado para todos os jogadores. Quem tem conta vê isso no perfil. Nome e sobrenome só aparecem para o próprio dono; a galera vê o nick e a foto.
+- **Amigos.** Cada conta tem um código de amigo de 6 caracteres (mesmo alfabeto do código da sala). Digitar o código de alguém cria a amizade nos dois sentidos, sem precisar aceitar: saber o código é o convite. O ranking do perfil é entre você e seus amigos (inclusive quem ainda não jogou), ordenado por vitórias, pontos e acertos. Dá pra remover um amigo, e a amizade some dos dois lados.
+- **Esqueci minha senha.** A pessoa digita o e-mail da conta e recebe um link que vale por 1 hora. O link entra na conta e abre a tela de senha nova. O envio depende de um servidor de e-mail (SMTP) configurado no Supabase.
 
 ## Estrutura
 

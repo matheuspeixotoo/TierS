@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { GameState, Profile, RankingRow } from './types'
+import type { Friend, GameState, Profile, RankingRow } from './types'
 
 function clean(message: string): string {
   // Mensagens das funções SQL já vêm em português; só tiramos ruído técnico.
@@ -41,5 +41,11 @@ export const api = {
   saveProfile: (nick: string, first: string, last: string) =>
     call<Profile>('save_profile', { p_nick: nick, p_first: first, p_last: last }),
   setAvatar: (path: string | null) => call<void>('set_avatar', { p_path: path }),
+  /** Ranking entre você e seus amigos. */
   getRanking: (limit = 50) => call<RankingRow[]>('get_ranking', { p_limit: limit }),
+
+  // Amigos
+  getFriends: () => call<Friend[]>('get_friends', {}),
+  addFriend: (code: string) => call<{ added: string; friends: Friend[] }>('add_friend', { p_code: code }),
+  removeFriend: (user: string) => call<Friend[]>('remove_friend', { p_user: user }),
 }

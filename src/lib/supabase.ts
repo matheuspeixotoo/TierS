@@ -5,6 +5,15 @@ const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 
 export const isConfigured = Boolean(url && key && !url.includes('SEU-PROJETO'))
 
+/**
+ * A página foi aberta pelo link de "esqueci minha senha"? Lemos a URL antes
+ * de o cliente processá-la: o link traz `type=recovery` no hash e a gente
+ * ainda marca `?recuperar=1` no redirecionamento, por garantia.
+ */
+export const recoveryRequested =
+  typeof window !== 'undefined' &&
+  (window.location.hash.includes('type=recovery') || new URLSearchParams(window.location.search).has('recuperar'))
+
 export const supabase = createClient(url ?? 'http://localhost:54321', key ?? 'missing-key', {
   auth: { persistSession: true, autoRefreshToken: true, storageKey: 'tiers-auth' },
 })
@@ -37,7 +46,23 @@ function authMessage(message: string): string {
   if (m.includes('unable to validate email') || m.includes('invalid email')) return 'Digite um e-mail válido.'
   if (m.includes('rate limit') || m.includes('too many')) return 'Muitas tentativas. Espere um pouco e tente de novo.'
   if (m.includes('failed to fetch')) return 'Sem conexão. Confira sua internet.'
+  if (m.includes('different from the old password')) return 'A senha nova precisa ser diferente da antiga.'
+  if (m.includes('session missing') || m.includes('not logged in')) return 'O link expirou ou já foi usado. Peça um novo.'
   return message
+}
+
+/** Manda o e-mail com o link para criar uma senha nova. */
+export async function sendPasswordReset(email: string): Promise<void> {
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: `${window.location.origin}/?recuperar=1`,
+  })
+  if (error) throw new Error(authMessage(error.message))
+}
+
+/** Troca a senha da conta logada (usado depois de abrir o link do e-mail). */
+export async function updatePassword(password: string): Promise<void> {
+  const { error } = await supabase.auth.updateUser({ password })
+  if (error) throw new Error(authMessage(error.message))
 }
 
 /** Cria uma conta com e-mail e senha e já entra nela (sem confirmação por e-mail). */

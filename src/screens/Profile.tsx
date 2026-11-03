@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Avatar, BigCard, Modal } from '../components/ui'
 import { api } from '../lib/api'
 import { plural } from '../lib/game'
 import { avatarUrl, removeAvatarFile, uploadAvatar } from '../lib/supabase'
-import type { Profile, RankingRow } from '../lib/types'
-import { Field } from './Account'
+import type { Friend, Profile, RankingRow } from '../lib/types'
+import { ErrorBox, Field } from './Account'
 
 const MEDAL = ['#FFD93D', '#E4DED3', '#F4A261']
+
+type Tab = 'history' | 'ranking' | 'friends'
 
 export function ProfileScreen({
   profile,
@@ -23,10 +25,12 @@ export function ProfileScreen({
   onLogout: () => Promise<void>
   onToast: (msg: string) => void
 }) {
-  const [tab, setTab] = useState<'history' | 'ranking'>('history')
+  const [tab, setTab] = useState<Tab>('history')
   const [ranking, setRanking] = useState<RankingRow[] | null>(null)
+  const [friends, setFriends] = useState<Friend[] | null>(null)
   const [editing, setEditing] = useState(false)
   const [confirmOut, setConfirmOut] = useState(false)
+  const [removing, setRemoving] = useState<Friend | null>(null)
   const [busy, setBusy] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const st = profile.stats
@@ -38,6 +42,21 @@ export function ProfileScreen({
       .then(setRanking)
       .catch((e: Error) => onToast(e.message))
   }, [tab, ranking, onToast])
+
+  useEffect(() => {
+    if (tab !== 'friends' || friends) return
+    api
+      .getFriends()
+      .then(setFriends)
+      .catch((e: Error) => onToast(e.message))
+  }, [tab, friends, onToast])
+
+  /** Lista de amigos mudou: ranking e contagem precisam acompanhar. */
+  function friendsChanged(list: Friend[]) {
+    setFriends(list)
+    setRanking(null)
+    onChange({ ...profile, friends: list.length })
+  }
 
   async function changePhoto(file: File | undefined) {
     if (!file) return
@@ -67,6 +86,19 @@ export function ProfileScreen({
       onToast((e as Error).message)
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function removeFriend(f: Friend) {
+    setBusy(true)
+    try {
+      friendsChanged(await api.removeFriend(f.user_id))
+      onToast(`${f.nick} saiu da sua lista de amigos.`)
+    } catch (e) {
+      onToast((e as Error).message)
+    } finally {
+      setBusy(false)
+      setRemoving(null)
     }
   }
 
@@ -103,8 +135,10 @@ export function ProfileScreen({
                 {profile.first_name} {profile.last_name}
               </span>
               {email && <span className="truncate text-[13px] font-bold text-muted">{email}</span>}
-              {profile.rank ? (
-                <span className="mt-1 w-fit rounded-full border-2 border-ink bg-sun px-2 py-px text-xs font-black">#{profile.rank} no ranking geral</span>
+              {profile.friends === 0 ? (
+                <span className="mt-1 text-xs font-bold text-muted">Adicione amigos pra ter um ranking</span>
+              ) : profile.rank ? (
+                <span className="mt-1 w-fit rounded-full border-2 border-ink bg-sun px-2 py-px text-xs font-black">#{profile.rank} entre os amigos</span>
               ) : (
                 <span className="mt-1 text-xs font-bold text-muted">Encerre uma partida pra entrar no ranking</span>
               )}
@@ -138,75 +172,37 @@ export function ProfileScreen({
           </button>
         </div>
 
-        {/* ---------- histórico e ranking ---------- */}
+        {/* ---------- histórico, ranking e amigos ---------- */}
         <div className="flex min-h-0 min-w-0 flex-col gap-2.5">
           <div className="flex rounded-xl border-2 border-ink bg-white p-0.5" role="tablist">
-            {(['history', 'ranking'] as const).map((t) => (
+            {(['history', 'ranking', 'friends'] as const).map((t) => (
               <button
                 key={t}
                 type="button"
                 role="tab"
                 aria-selected={tab === t}
-                className={`flex-1 rounded-[9px] px-3 py-1.5 text-sm font-black ${tab === t ? 'bg-sun' : 'text-muted'}`}
+                className={`flex-1 rounded-[9px] px-2 py-1.5 text-sm font-black ${tab === t ? 'bg-sun' : 'text-muted'}`}
                 onClick={() => setTab(t)}
               >
-                {t === 'history' ? 'Minhas partidas' : 'Ranking geral'}
+                {t === 'history' ? 'Partidas' : t === 'ranking' ? 'Ranking' : `Amigos (${profile.friends})`}
               </button>
             ))}
           </div>
 
           <div className="max-h-[48dvh] min-h-0 overflow-y-auto pr-0.5 md:max-h-[60dvh]">
             {tab === 'history' ? (
-              profile.history.length === 0 ? (
-                <Empty>Nenhuma partida ainda. Quando o host encerrar uma partida, ela aparece aqui.</Empty>
-              ) : (
-                <ol className="m-0 flex list-none flex-col gap-1.5 p-0">
-                  {profile.history.map((m) => (
-                    <li key={m.id} className="flex items-center gap-2 rounded-[10px] border-2 border-ink bg-white px-2 py-1.5">
-                      <span
-                        className="flex h-8 w-8 flex-none items-center justify-center rounded-lg border-2 border-ink font-display text-sm"
-                        style={{ background: MEDAL[m.position - 1] ?? '#FFFFFF' }}
-                      >
-                        {m.position}º
-                      </span>
-                      <div className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate text-[14px] font-black">
-                          {m.position === 1 ? 'Você venceu' : `${m.winner ?? '?'} venceu`} · {plural(m.players_count, 'jogador', 'jogadores')}
-                        </span>
-                        <span className="truncate text-xs font-bold text-muted">
-                          {formatDate(m.ended_at)} · {plural(m.rounds_done, 'rodada', 'rodadas')} · {m.hits} acertos, {m.misses} erros
-                        </span>
-                      </div>
-                      <span className="flex-none font-display text-[15px]">{m.score} pts</span>
-                    </li>
-                  ))}
-                </ol>
-              )
-            ) : ranking === null ? (
-              <Empty>Carregando...</Empty>
-            ) : ranking.length === 0 ? (
-              <Empty>Ninguém com conta encerrou uma partida ainda.</Empty>
+              <History profile={profile} />
+            ) : tab === 'ranking' ? (
+              <Ranking ranking={ranking} friends={profile.friends} onAddFriends={() => setTab('friends')} />
             ) : (
-              <ol className="m-0 flex list-none flex-col gap-1.5 p-0">
-                {ranking.map((r, i) => (
-                  <li key={r.user_id} className={`flex items-center gap-2 rounded-[10px] border-2 border-ink px-2 py-1.5 ${r.is_me ? 'bg-lilac' : 'bg-white'}`}>
-                    <span
-                      className="flex h-7 w-7 flex-none items-center justify-center rounded-lg border-2 border-ink font-display text-xs"
-                      style={{ background: MEDAL[i] ?? '#FFFFFF' }}
-                    >
-                      {i + 1}
-                    </span>
-                    <Avatar name={r.nick} color="#E4DED3" size={30} src={avatarUrl(r.avatar_path)} />
-                    <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate text-[14px] font-black">{r.is_me ? `${r.nick} (você)` : r.nick}</span>
-                      <span className="truncate text-xs font-bold text-muted">
-                        {plural(r.wins, 'vitória', 'vitórias')} em {plural(r.matches, 'partida', 'partidas')} · {r.hits} acertos
-                      </span>
-                    </div>
-                    <span className="flex-none font-display text-[15px]">{r.points} pts</span>
-                  </li>
-                ))}
-              </ol>
+              <Friends
+                code={profile.friend_code ?? ''}
+                friends={friends}
+                busy={busy}
+                onAdded={friendsChanged}
+                onRemove={setRemoving}
+                onToast={onToast}
+              />
             )}
           </div>
         </div>
@@ -222,6 +218,20 @@ export function ProfileScreen({
             onToast('Perfil salvo!')
           }}
         />
+      )}
+
+      {removing && (
+        <Modal title={`Remover ${removing.nick}?`} onClose={() => setRemoving(null)}>
+          <span className="text-[15px] font-bold">Vocês saem do ranking um do outro. Dá pra adicionar de novo pelo código.</span>
+          <div className="grid grid-cols-2 gap-2.5">
+            <button type="button" className="btn bg-coral text-[15px]" disabled={busy} onClick={() => void removeFriend(removing)}>
+              Remover
+            </button>
+            <button type="button" className="btn bg-white text-[15px]" onClick={() => setRemoving(null)}>
+              Manter
+            </button>
+          </div>
+        </Modal>
       )}
 
       {confirmOut && (
@@ -254,6 +264,196 @@ export function ProfileScreen({
   )
 }
 
+function History({ profile }: { profile: Profile }) {
+  if (profile.history.length === 0) return <Empty>Nenhuma partida ainda. Quando o host encerrar uma partida, ela aparece aqui.</Empty>
+  return (
+    <ol className="m-0 flex list-none flex-col gap-1.5 p-0">
+      {profile.history.map((m) => (
+        <li key={m.id} className="flex items-center gap-2 rounded-[10px] border-2 border-ink bg-white px-2 py-1.5">
+          <span
+            className="flex h-8 w-8 flex-none items-center justify-center rounded-lg border-2 border-ink font-display text-sm"
+            style={{ background: MEDAL[m.position - 1] ?? '#FFFFFF' }}
+          >
+            {m.position}º
+          </span>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-[14px] font-black">
+              {m.position === 1 ? 'Você venceu' : `${m.winner ?? '?'} venceu`} · {plural(m.players_count, 'jogador', 'jogadores')}
+            </span>
+            <span className="truncate text-xs font-bold text-muted">
+              {formatDate(m.ended_at)} · {plural(m.rounds_done, 'rodada', 'rodadas')} · {m.hits} acertos, {m.misses} erros
+            </span>
+          </div>
+          <span className="flex-none font-display text-[15px]">{m.score} pts</span>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+function Ranking({ ranking, friends, onAddFriends }: { ranking: RankingRow[] | null; friends: number; onAddFriends: () => void }) {
+  if (friends === 0) {
+    return (
+      <div className="flex flex-col gap-2.5">
+        <Empty>O ranking é entre você e seus amigos. Adicione alguém pelo código de amigo pra começar a comparar.</Empty>
+        <button type="button" className="btn self-start bg-sky text-[15px]" onClick={onAddFriends}>
+          Adicionar amigos
+        </button>
+      </div>
+    )
+  }
+  if (ranking === null) return <Empty>Carregando...</Empty>
+  return (
+    <ol className="m-0 flex list-none flex-col gap-1.5 p-0">
+      {ranking.map((r, i) => (
+        <li key={r.user_id} className={`flex items-center gap-2 rounded-[10px] border-2 border-ink px-2 py-1.5 ${r.is_me ? 'bg-lilac' : 'bg-white'}`}>
+          <span
+            className="flex h-7 w-7 flex-none items-center justify-center rounded-lg border-2 border-ink font-display text-xs"
+            style={{ background: MEDAL[i] ?? '#FFFFFF' }}
+          >
+            {i + 1}
+          </span>
+          <Avatar name={r.nick} color="#E4DED3" size={30} src={avatarUrl(r.avatar_path)} />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-[14px] font-black">{r.is_me ? `${r.nick} (você)` : r.nick}</span>
+            <span className="truncate text-xs font-bold text-muted">
+              {r.matches === 0
+                ? 'Ainda não encerrou nenhuma partida'
+                : `${plural(r.wins, 'vitória', 'vitórias')} em ${plural(r.matches, 'partida', 'partidas')} · ${r.hits} acertos`}
+            </span>
+          </div>
+          <span className="flex-none font-display text-[15px]">{r.points} pts</span>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+function Friends({
+  code,
+  friends,
+  busy,
+  onAdded,
+  onRemove,
+  onToast,
+}: {
+  code: string
+  friends: Friend[] | null
+  busy: boolean
+  onAdded: (list: Friend[]) => void
+  onRemove: (f: Friend) => void
+  onToast: (msg: string) => void
+}) {
+  const [typed, setTyped] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
+      onToast(`Seu código: ${code}`)
+    }
+  }
+
+  async function share() {
+    try {
+      await navigator.share({
+        title: 'TierS',
+        text: `Me adiciona no TierS! Meu código de amigo é ${code}`,
+        url: window.location.origin,
+      })
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') void copy()
+    }
+  }
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setAdding(true)
+    try {
+      const r = await api.addFriend(typed)
+      onAdded(r.friends)
+      setTyped('')
+      onToast(`${r.added} agora é seu amigo!`)
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="pop flex flex-col gap-2 rounded-2xl bg-ink px-3.5 py-3 text-cream">
+        <span className="text-xs font-extrabold tracking-wider text-haze">SEU CÓDIGO DE AMIGO</span>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="font-display text-[30px] leading-none tracking-[4px] text-sun">{code}</span>
+          <div className="flex gap-2">
+            <button type="button" className="min-h-9 rounded-xl border-2 border-cream bg-sun px-3 text-sm font-black text-ink" onClick={() => void copy()}>
+              {copied ? 'Copiado!' : 'Copiar'}
+            </button>
+            {canShare && (
+              <button type="button" className="min-h-9 rounded-xl border-2 border-cream bg-sky px-3 text-sm font-black text-ink" onClick={() => void share()}>
+                Enviar
+              </button>
+            )}
+          </div>
+        </div>
+        <span className="text-xs font-bold text-haze">Quem digitar esse código vira seu amigo, e vocês entram no ranking um do outro.</span>
+      </div>
+
+      <form className="flex flex-col gap-2" onSubmit={(e) => void add(e)}>
+        <label htmlFor="friend-code" className="text-[15px] font-black">
+          Adicionar amigo pelo código
+        </label>
+        <div className="flex gap-2">
+          <input
+            id="friend-code"
+            className="field font-display! tracking-[4px] uppercase"
+            value={typed}
+            maxLength={6}
+            autoComplete="off"
+            autoCapitalize="characters"
+            placeholder="ABC123"
+            onChange={(e) => setTyped(e.target.value.replace(/[^a-z0-9]/gi, '').toUpperCase())}
+          />
+          <button type="submit" className="btn flex-none bg-mint text-[15px]" disabled={adding || busy || typed.length !== 6}>
+            {adding ? '...' : 'Adicionar'}
+          </button>
+        </div>
+        {error && <ErrorBox>{error}</ErrorBox>}
+      </form>
+
+      {friends === null ? (
+        <Empty>Carregando...</Empty>
+      ) : friends.length === 0 ? (
+        <Empty>Você ainda não tem amigos no TierS. Mande seu código pra galera ou digite o de alguém.</Empty>
+      ) : (
+        <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+          {friends.map((f) => (
+            <li key={f.user_id} className="flex items-center gap-2 rounded-[10px] border-2 border-ink bg-white px-2 py-1.5">
+              <Avatar name={f.nick} color="#E4DED3" size={30} src={avatarUrl(f.avatar_path)} />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-[14px] font-black">{f.nick}</span>
+                <span className="truncate text-xs font-bold text-muted">Amigos desde {formatDate(f.since)}</span>
+              </div>
+              <button type="button" className="btn-ghost text-xs" disabled={busy} onClick={() => onRemove(f)}>
+                Remover
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 function EditProfile({ profile, onClose, onSaved }: { profile: Profile; onClose: () => void; onSaved: (p: Profile) => void }) {
   const [nick, setNick] = useState(profile.nick)
   const [first, setFirst] = useState(profile.first_name ?? '')
@@ -283,11 +483,7 @@ function EditProfile({ profile, onClose, onSaved }: { profile: Profile; onClose:
           <Field id="e-first" label="Nome" value={first} onChange={setFirst} maxLength={40} autoComplete="given-name" />
           <Field id="e-last" label="Sobrenome" value={last} onChange={setLast} maxLength={40} autoComplete="family-name" />
         </div>
-        {error && (
-          <p role="alert" className="m-0 rounded-xl border-2 border-ink bg-coral/30 px-3 py-2 text-[15px] font-extrabold">
-            {error}
-          </p>
-        )}
+        {error && <ErrorBox>{error}</ErrorBox>}
         <div className="grid grid-cols-2 gap-2.5">
           <button type="submit" className="btn bg-sun text-[15px]" disabled={busy}>
             {busy ? '...' : 'Salvar'}
