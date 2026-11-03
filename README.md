@@ -53,6 +53,8 @@ O host escolhe quantas pessoas vão jogar ao criar a sala (dá pra mudar na sala
 
 Com até 4 jogadores, os ajustes têm 2 voltas. Subir ou descer 1 nível considera só os Tiers do quadro: com S, B e F, subir do B vai direto pro S.
 
+**Em dupla** as regras mudam um pouco: no posicionamento, cada Tier recebe no máximo uma resposta de cada jogador (duas respostas da mesma pessoa no mesmo Tier travavam os ajustes). E no ajuste a resposta pode ir para qualquer Tier, não só 1 nível: ela troca de lugar com a resposta da outra pessoa que estiver lá. Você só mexe nas respostas que você mesmo posicionou (em dupla, são todas as da outra pessoa). Aproximar do Tier real continua valendo +1 e afastar, −1.
+
 ## Como funciona
 
 - **Servidor manda nas regras.** Todo movimento (entrar na sala, posicionar, mover, revelar, pontuar) é uma função SQL (`security definer`) que valida a vez, o dono da resposta e o limite de 2 respostas por Tier. O app não consegue escrever direto nas tabelas.

@@ -31,6 +31,7 @@ export function ProfileScreen({
   const [editing, setEditing] = useState(false)
   const [confirmOut, setConfirmOut] = useState(false)
   const [removing, setRemoving] = useState<Friend | null>(null)
+  const [viewing, setViewing] = useState<{ user_id: string; nick: string } | null>(null)
   const [busy, setBusy] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const st = profile.stats
@@ -193,7 +194,7 @@ export function ProfileScreen({
             {tab === 'history' ? (
               <History profile={profile} />
             ) : tab === 'ranking' ? (
-              <Ranking ranking={ranking} friends={profile.friends} onAddFriends={() => setTab('friends')} />
+              <Ranking ranking={ranking} friends={profile.friends} onAddFriends={() => setTab('friends')} onOpen={setViewing} />
             ) : (
               <Friends
                 code={profile.friend_code ?? ''}
@@ -201,6 +202,7 @@ export function ProfileScreen({
                 busy={busy}
                 onAdded={friendsChanged}
                 onRemove={setRemoving}
+                onOpen={setViewing}
                 onToast={onToast}
               />
             )}
@@ -219,6 +221,8 @@ export function ProfileScreen({
           }}
         />
       )}
+
+      {viewing && <FriendProfile userId={viewing.user_id} nick={viewing.nick} onClose={() => setViewing(null)} />}
 
       {removing && (
         <Modal title={`Remover ${removing.nick}?`} onClose={() => setRemoving(null)}>
@@ -291,7 +295,17 @@ function History({ profile }: { profile: Profile }) {
   )
 }
 
-function Ranking({ ranking, friends, onAddFriends }: { ranking: RankingRow[] | null; friends: number; onAddFriends: () => void }) {
+function Ranking({
+  ranking,
+  friends,
+  onAddFriends,
+  onOpen,
+}: {
+  ranking: RankingRow[] | null
+  friends: number
+  onAddFriends: () => void
+  onOpen: (f: { user_id: string; nick: string }) => void
+}) {
   if (friends === 0) {
     return (
       <div className="flex flex-col gap-2.5">
@@ -306,23 +320,31 @@ function Ranking({ ranking, friends, onAddFriends }: { ranking: RankingRow[] | n
   return (
     <ol className="m-0 flex list-none flex-col gap-1.5 p-0">
       {ranking.map((r, i) => (
-        <li key={r.user_id} className={`flex items-center gap-2 rounded-[10px] border-2 border-ink px-2 py-1.5 ${r.is_me ? 'bg-lilac' : 'bg-white'}`}>
-          <span
-            className="flex h-7 w-7 flex-none items-center justify-center rounded-lg border-2 border-ink font-display text-xs"
-            style={{ background: MEDAL[i] ?? '#FFFFFF' }}
+        <li key={r.user_id}>
+          <button
+            type="button"
+            disabled={r.is_me}
+            onClick={() => onOpen({ user_id: r.user_id, nick: r.nick })}
+            title={r.is_me ? undefined : `Ver perfil de ${r.nick}`}
+            className={`flex w-full items-center gap-2 rounded-[10px] border-2 border-ink px-2 py-1.5 text-left ${r.is_me ? 'bg-lilac' : 'bg-white'}`}
           >
-            {i + 1}
-          </span>
-          <Avatar name={r.nick} color="#E4DED3" size={30} src={avatarUrl(r.avatar_path)} />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-[14px] font-black">{r.is_me ? `${r.nick} (você)` : r.nick}</span>
-            <span className="truncate text-xs font-bold text-muted">
-              {r.matches === 0
-                ? 'Ainda não encerrou nenhuma partida'
-                : `${plural(r.wins, 'vitória', 'vitórias')} em ${plural(r.matches, 'partida', 'partidas')} · ${r.hits} acertos`}
+            <span
+              className="flex h-7 w-7 flex-none items-center justify-center rounded-lg border-2 border-ink font-display text-xs"
+              style={{ background: MEDAL[i] ?? '#FFFFFF' }}
+            >
+              {i + 1}
             </span>
-          </div>
-          <span className="flex-none font-display text-[15px]">{r.points} pts</span>
+            <Avatar name={r.nick} color="#E4DED3" size={30} src={avatarUrl(r.avatar_path)} />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-[14px] font-black">{r.is_me ? `${r.nick} (você)` : r.nick}</span>
+              <span className="truncate text-xs font-bold text-muted">
+                {r.matches === 0
+                  ? 'Ainda não encerrou nenhuma partida'
+                  : `${plural(r.wins, 'vitória', 'vitórias')} em ${plural(r.matches, 'partida', 'partidas')} · ${r.hits} acertos`}
+              </span>
+            </div>
+            <span className="flex-none font-display text-[15px]">{r.points} pts</span>
+          </button>
         </li>
       ))}
     </ol>
@@ -335,6 +357,7 @@ function Friends({
   busy,
   onAdded,
   onRemove,
+  onOpen,
   onToast,
 }: {
   code: string
@@ -342,6 +365,7 @@ function Friends({
   busy: boolean
   onAdded: (list: Friend[]) => void
   onRemove: (f: Friend) => void
+  onOpen: (f: { user_id: string; nick: string }) => void
   onToast: (msg: string) => void
 }) {
   const [typed, setTyped] = useState('')
@@ -438,11 +462,13 @@ function Friends({
         <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
           {friends.map((f) => (
             <li key={f.user_id} className="flex items-center gap-2 rounded-[10px] border-2 border-ink bg-white px-2 py-1.5">
-              <Avatar name={f.nick} color="#E4DED3" size={30} src={avatarUrl(f.avatar_path)} />
-              <div className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-[14px] font-black">{f.nick}</span>
-                <span className="truncate text-xs font-bold text-muted">Amigos desde {formatDate(f.since)}</span>
-              </div>
+              <button type="button" className="flex min-w-0 flex-1 items-center gap-2 text-left" title={`Ver perfil de ${f.nick}`} onClick={() => onOpen(f)}>
+                <Avatar name={f.nick} color="#E4DED3" size={30} src={avatarUrl(f.avatar_path)} />
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-[14px] font-black underline decoration-2 underline-offset-2">{f.nick}</span>
+                  <span className="truncate text-xs font-bold text-muted">Amigos desde {formatDate(f.since)}</span>
+                </div>
+              </button>
               <button type="button" className="btn-ghost text-xs" disabled={busy} onClick={() => onRemove(f)}>
                 Remover
               </button>
@@ -451,6 +477,78 @@ function Friends({
         </ul>
       )}
     </div>
+  )
+}
+
+/** Perfil de um amigo: nick, foto, estatísticas, posição entre os amigos dele e últimas partidas. */
+function FriendProfile({ userId, nick, onClose }: { userId: string; nick: string; onClose: () => void }) {
+  const [p, setP] = useState<Profile | null | undefined>(undefined)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    api
+      .getProfile(userId)
+      .then(setP)
+      .catch((e: Error) => setError(e.message))
+  }, [userId])
+
+  return (
+    <Modal title={`Perfil de ${nick}`} onClose={onClose}>
+      {error ? (
+        <ErrorBox>{error}</ErrorBox>
+      ) : p === undefined ? (
+        <Empty>Carregando...</Empty>
+      ) : p === null ? (
+        <Empty>Esse perfil não existe mais.</Empty>
+      ) : (
+        <div className="flex max-h-[70dvh] min-h-0 flex-col gap-3 overflow-y-auto pr-0.5">
+          <div className="flex items-center gap-3">
+            <Avatar name={p.nick} color="#4CC9F0" size={64} src={avatarUrl(p.avatar_path)} />
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate font-display text-2xl leading-none">{p.nick}</span>
+              <span className="text-xs font-bold text-muted">No TierS desde {formatDate(p.created_at).slice(0, 5)} · {plural(p.friends, 'amigo', 'amigos')}</span>
+              {p.rank ? (
+                <span className="mt-1 w-fit rounded-full border-2 border-ink bg-sun px-2 py-px text-xs font-black">#{p.rank} entre os amigos dele</span>
+              ) : (
+                <span className="mt-1 text-xs font-bold text-muted">Ainda não encerrou nenhuma partida</span>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <Stat label="Partidas" value={p.stats.matches} bg="#E9E1FF" />
+            <Stat label="Vitórias" value={p.stats.wins} bg="#FFD93D" />
+            <Stat label="Pontos" value={p.stats.points} bg="#6BCB77" />
+            <Stat label="Acertos" value={p.stats.hits} bg="#4CC9F0" />
+            <Stat label="Erros" value={p.stats.misses} bg="#FF6B6B" />
+            <Stat label="Gabaritos" value={p.stats.gabaritos} bg="#FFA94D" />
+          </div>
+          {p.history.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-black tracking-wider text-muted">ÚLTIMAS PARTIDAS</span>
+              <ol className="m-0 flex list-none flex-col gap-1.5 p-0">
+                {p.history.slice(0, 5).map((m) => (
+                  <li key={m.id} className="flex items-center gap-2 rounded-[10px] border-2 border-ink bg-white px-2 py-1">
+                    <span
+                      className="flex h-7 w-7 flex-none items-center justify-center rounded-lg border-2 border-ink font-display text-xs"
+                      style={{ background: MEDAL[m.position - 1] ?? '#FFFFFF' }}
+                    >
+                      {m.position}º
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-xs font-bold text-muted">
+                      {formatDate(m.ended_at)} · {plural(m.players_count, 'jogador', 'jogadores')} · {m.hits} acertos, {m.misses} erros
+                    </span>
+                    <span className="flex-none font-display text-[14px]">{m.score} pts</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </div>
+      )}
+      <button type="button" className="btn bg-white text-[15px]" onClick={onClose}>
+        Fechar
+      </button>
+    </Modal>
   )
 }
 

@@ -27,6 +27,8 @@ export function Game({ s, run, busy }: { s: GameState; run: Run; busy: boolean }
   // Quadro com 3 ou 4 respostas por fileira: cartas mais estreitas e mais altas.
   const dense = cap >= 3
   const tall = boardTiers.length <= 3
+  // Em dupla: cada Tier recebe uma resposta de cada jogador e o ajuste vai pra qualquer Tier.
+  const duel = n === 2
 
   const [tab, setTab] = useState<Tab>('jogada')
   const [sel, setSel] = useState<string | null>(null)
@@ -55,20 +57,25 @@ export function Game({ s, run, busy }: { s: GameState; run: Run; busy: boolean }
 
   const act = (fn: () => Promise<unknown>) => void run(fn)
   const place = (tier: number) => sel && act(() => api.placeCard(room.id, sel, tier))
-  // Pra onde a resposta selecionada pode ir: Tier vizinho com espaço, ou cheio mas com alguma resposta de outra pessoa pra trocar.
-  const canMove = (dir: number) => {
-    if (!selCard || selCard.placed_tier === null) return false
-    const to = boardTiers[boardTiers.indexOf(selCard.placed_tier) + dir]
-    if (to === undefined) return false
+  // Em dupla, um Tier que já tem uma resposta desse autor não aceita outra.
+  const blockedFor = (t: number, author: string | undefined) => duel && !!author && tiers[t].some((o) => o.author_id === author)
+  // Pra onde a resposta selecionada pode ir: Tier com espaço, ou cheio mas com alguma resposta de outra pessoa pra trocar.
+  const canGo = (to: number | undefined) => {
+    if (!selCard || selCard.placed_tier === null || to === undefined || to === selCard.placed_tier) return false
     return tiers[to].length < cap || tiers[to].some((o) => o.author_id !== s.me)
   }
-  const move = (dir: number) => {
-    if (!selCard || selCard.placed_tier === null) return
-    const to = boardTiers[boardTiers.indexOf(selCard.placed_tier) + dir]
-    if (to === undefined) return
-    if (tiers[to].length >= cap) setPending({ card: selCard.id, dir, to })
-    else act(() => api.adjustMove(room.id, selCard.id, dir, null))
+  const neighbor = (dir: number) => (selCard && selCard.placed_tier !== null ? boardTiers[boardTiers.indexOf(selCard.placed_tier) + dir] : undefined)
+  const goTo = (to: number | undefined) => {
+    if (!selCard || selCard.placed_tier === null || to === undefined) return
+    const dir = boardTiers.indexOf(to) - boardTiers.indexOf(selCard.placed_tier)
+    if (tiers[to].length < cap) return act(() => api.adjustMove(room.id, selCard.id, dir, null))
+    const others = tiers[to].filter((o) => o.author_id !== s.me)
+    // Em dupla só existe uma resposta da outra pessoa em cada Tier: troca direto, sem perguntar.
+    if (duel && others.length === 1) return act(() => api.adjustMove(room.id, selCard.id, dir, others[0].id))
+    setPending({ card: selCard.id, dir, to })
   }
+  const canMove = (dir: number) => canGo(neighbor(dir))
+  const move = (dir: number) => goTo(neighbor(dir))
 
   // ---------- textos da vez ----------
   const phase = status === 'place' ? 'POSICIONAMENTO' : status === 'adjust' ? `AJUSTES ${Math.min(room.turn + 1, adjustTurns)}/${adjustTurns}` : 'REVELAÇÃO'
@@ -83,7 +90,11 @@ export function Game({ s, run, busy }: { s: GameState; run: Run; busy: boolean }
           : 'Escolha uma resposta e depois o Tier dela.'
         : `${nameOf(s, cur)} está pensando onde colocar...`
     } else {
-      instruction = myTurn ? 'Toque numa resposta do quadro para subir ou descer 1 nível. Ou passe a vez.' : `${nameOf(s, cur)} está analisando o quadro...`
+      instruction = myTurn
+        ? duel
+          ? 'Toque numa resposta do quadro e escolha o Tier pra onde ela vai. Ela troca de lugar com a resposta que estiver lá. Ou passe a vez.'
+          : 'Toque numa resposta do quadro para subir ou descer 1 nível. Ou passe a vez.'
+        : `${nameOf(s, cur)} está analisando o quadro...`
     }
   }
   const turnBg = myTurn ? 'bg-sun' : status === 'reveal' ? 'bg-bubblegum' : 'bg-sky'
@@ -138,7 +149,7 @@ export function Game({ s, run, busy }: { s: GameState; run: Run; busy: boolean }
                 const letter = TIERS[t]
                 const c = tiers[t][k]
                 if (!c) {
-                  const canDrop = status === 'place' && myTurn && !!sel
+                  const canDrop = status === 'place' && myTurn && !!sel && !blockedFor(t, selCard?.author_id)
                   return (
                     <button
                       key={k}
@@ -228,19 +239,20 @@ export function Game({ s, run, busy }: { s: GameState; run: Run; busy: boolean }
                     <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${boardTiers.length}, minmax(0, 1fr))` }}>
                       {boardTiers.map((t) => {
                         const letter = TIERS[t]
-                        const full = tiers[t].length >= cap
+                        const blocked = blockedFor(t, selCard.author_id)
+                        const full = tiers[t].length >= cap || blocked
                         return (
                           <button
                             key={letter}
                             type="button"
                             disabled={full || busy}
                             onClick={() => place(t)}
-                            aria-label={`Colocar no Tier ${letter}${full ? ' (cheio)' : ''}`}
+                            aria-label={`Colocar no Tier ${letter}${blocked ? ' (já tem uma resposta dessa pessoa)' : full ? ' (cheio)' : ''}`}
                             className="btn flex min-h-[58px] flex-col items-center justify-center gap-0.5 p-1 text-2xl leading-none md:min-h-[68px] md:text-[30px]"
                             style={{ background: full ? '#E4DED3' : TIER_COLORS[t] }}
                           >
                             {letter}
-                            {full && <span className="font-sans text-[11px] font-black">cheio</span>}
+                            {full && <span className="font-sans text-[11px] font-black">{blocked ? 'já tem' : 'cheio'}</span>}
                           </button>
                         )
                       })}
@@ -292,14 +304,37 @@ export function Game({ s, run, busy }: { s: GameState; run: Run; busy: boolean }
                     </span>
                     {!pending ? (
                       <>
-                        <div className="grid grid-cols-2 gap-2.5">
-                          <button type="button" className="btn bg-white" disabled={!canMove(-1) || busy} onClick={() => move(-1)}>
-                            Subir 1
-                          </button>
-                          <button type="button" className="btn bg-white" disabled={!canMove(1) || busy} onClick={() => move(1)}>
-                            Descer 1
-                          </button>
-                        </div>
+                        {duel ? (
+                          <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${boardTiers.length}, minmax(0, 1fr))` }}>
+                            {boardTiers.map((t) => {
+                              const here = selCard?.placed_tier === t
+                              const ok = canGo(t)
+                              return (
+                                <button
+                                  key={t}
+                                  type="button"
+                                  disabled={!ok || busy}
+                                  onClick={() => goTo(t)}
+                                  aria-label={here ? `Tier ${TIERS[t]} (está aqui)` : `Mover para o Tier ${TIERS[t]}`}
+                                  className="btn flex min-h-[52px] flex-col items-center justify-center gap-0.5 p-1 text-2xl leading-none md:min-h-[60px] md:text-[28px]"
+                                  style={{ background: ok ? TIER_COLORS[t] : '#E4DED3' }}
+                                >
+                                  {TIERS[t]}
+                                  {here && <span className="font-sans text-[11px] font-black">aqui</span>}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2.5">
+                            <button type="button" className="btn bg-white" disabled={!canMove(-1) || busy} onClick={() => move(-1)}>
+                              Subir 1
+                            </button>
+                            <button type="button" className="btn bg-white" disabled={!canMove(1) || busy} onClick={() => move(1)}>
+                              Descer 1
+                            </button>
+                          </div>
+                        )}
                         <button type="button" className="btn bg-lilac text-[15px]" disabled={busy} onClick={() => act(() => api.adjustPass(room.id))}>
                           Passar a vez
                         </button>
@@ -330,7 +365,9 @@ export function Game({ s, run, busy }: { s: GameState; run: Run; busy: boolean }
                 ) : (
                   <>
                     <span className="text-[15px] font-black">Vez de {nameOf(s, cur)}</span>
-                    <span className="text-sm font-bold text-muted">Cada jogador pode subir ou descer uma resposta em 1 nível, ou passar.</span>
+                    <span className="text-sm font-bold text-muted">
+                      {duel ? 'Em dupla, cada jogada leva uma resposta pra qualquer Tier, trocando com a que está lá. Ou passa.' : 'Cada jogador pode subir ou descer uma resposta em 1 nível, ou passar.'}
+                    </span>
                     {skipBtn}
                   </>
                 ))}
