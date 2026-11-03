@@ -13,6 +13,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
 ![Tailwind CSS v4](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-Postgres_·_Auth_·_Realtime-3FCF8E?logo=supabase&logoColor=white)
+[![Netlify Status](https://api.netlify.com/api/v1/badges/017a88c2-f85e-46af-90d9-3ba53a7a92d5/deploy-status)](https://app.netlify.com/projects/tiers-jogo/deploys)
 
 <img src="docs/home.png" width="800" alt="Tela inicial do TierS: criar sala ou entrar com o código" />
 
