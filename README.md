@@ -1,8 +1,35 @@
+<div align="center">
+
+<img src="public/icon.svg" width="96" alt="Ícone do TierS" />
+
 # TierS
 
-O jogo de Tier List em grupo. Cada jogador recebe um Tier secreto (S, A, B, C ou F), escreve algo do tema sorteado que combine com ele, e o grupo tenta montar a Tier List perfeita. De 2 a 10 jogadores, cada um no seu celular.
+**O jogo de Tier List em grupo.** Cada jogador recebe um Tier secreto (S, A, B, C ou F), escreve algo do tema sorteado que combine com ele, e o grupo tenta montar a Tier List perfeita. De 2 a 10 jogadores, cada um no seu celular.
 
-Stack: React 19 + Vite + TypeScript + Tailwind v4 no front, Supabase (Postgres, Auth anônimo e Realtime) no back.
+[![Jogar agora](https://img.shields.io/badge/Jogar_agora-tiers--jogo.netlify.app-FFD93D?style=for-the-badge&logo=netlify&logoColor=2B1A63&labelColor=2B1A63)](https://tiers-jogo.netlify.app)
+
+![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
+![Tailwind CSS v4](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?logo=tailwindcss&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-Postgres_·_Auth_·_Realtime-3FCF8E?logo=supabase&logoColor=white)
+![Netlify Status](https://api.netlify.com/api/v1/badges/017a88c2-f85e-46af-90d9-3ba53a7a92d5/deploy-status)
+
+<img src="docs/home.png" width="800" alt="Tela inicial do TierS: criar sala ou entrar com o código" />
+
+</div>
+
+## Como jogar
+
+1. **Crie uma sala** com o seu apelido e escolha quantas pessoas vão jogar. Compartilhe o código de 4 letras.
+2. **Cada um entra pelo celular** com o código e um apelido. A partida começa quando a sala está completa.
+3. **Um jogador sorteado escolhe o tema** entre duas opções (ou sorteia de novo, até 3 vezes por partida).
+4. **Cada um recebe um Tier secreto** e escreve algo do tema que combine com ele. Quem tirou F escreve algo F mesmo.
+5. **Na sua vez, coloque a resposta de alguém no quadro.** Você nunca mexe na própria resposta.
+6. **Ajustes:** cada um pode subir ou descer uma resposta em 1 nível (ou passar).
+7. **Revelação:** acerto vale +1, erro vale −1. Se o time gabaritar, todo mundo ganha +2.
+
+Sem cadastro, sem app pra instalar: abre no navegador do celular e pronto.
 
 ## Como rodar
 
@@ -11,7 +38,7 @@ Stack: React 19 + Vite + TypeScript + Tailwind v4 no front, Supabase (Postgres, 
 1. Crie um projeto em [supabase.com](https://supabase.com).
 2. Em **Authentication > Sign In / Providers**, ative **Allow anonymous sign-ins**. Os jogadores entram só com um apelido, sem cadastro.
 3. Em **SQL Editor**, rode os arquivos de `supabase/migrations/` em ordem: primeiro `20261103000000_tiers.sql`, depois `20261103010000_theme_choice.sql`, `20261103020000_reroll_recharge.sql` `20261103030000_player_counts.sql`, `20261103040000_no_own_swap.sql` e por último `20261103050000_more_themes.sql`.
-   (Ou, com a Supabase CLI: `supabase link` e `supabase db push`.)
+   Ou rode o arquivo único `supabase/setup_completo.sql`, que equivale aos 6. Ou ainda, com a Supabase CLI: `supabase link` e `supabase db push`.
 4. Em **Database > Publications**, confira se a tabela `rooms` aparece em `supabase_realtime`. A migration já faz isso.
 
 ### 2. Configurar o front
@@ -31,7 +58,13 @@ npm run dev
 
 O `npm run dev` já sobe com `--host`, então dá para abrir no celular pelo IP do PC na mesma rede Wi‑Fi (o Vite mostra o endereço no terminal).
 
-Para publicar, rode `npm run build` e suba a pasta `dist` na Vercel, Netlify ou Cloudflare Pages, com as mesmas duas variáveis de ambiente.
+### 4. Publicar
+
+O repositório já traz um `netlify.toml` (build `npm run build`, pasta `dist`). Na Netlify, conecte o repositório ou envie a pasta `dist`, e cadastre as mesmas duas variáveis (`VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`) em **Project configuration > Environment variables**. Vercel e Cloudflare Pages funcionam do mesmo jeito.
+
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/matheuspeixotoo/TierS)
+
+A versão oficial está no ar em **[tiers-jogo.netlify.app](https://tiers-jogo.netlify.app)**.
 
 ## Formações
 
@@ -70,6 +103,8 @@ src/lib/               cliente Supabase, chamadas RPC, tipos e constantes
 src/hooks/useRoom.ts   sincronização em tempo real da sala
 src/screens/           Home, Lobby, Deal (sorteio), Write, Game, Final
 src/components/        UI compartilhada (logo, avatares, ranking, modal)
+netlify.toml           build e pasta de publicação na Netlify
+docs/                  imagens do README
 ```
 
 ## Temas
